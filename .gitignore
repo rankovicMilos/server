@@ -2,3 +2,5 @@
 /node_modules
 /server.js.backup
 /test-email.js
+/generated/prisma
+prisma/migrations/migration_lock.toml

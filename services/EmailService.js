@@ -5,8 +5,9 @@ const {
 } = require("../lib/utils");
 
 class EmailService {
-  constructor() {
+  constructor(patientService = null) {
     this.transporter = null;
+    this.patientService = patientService;
     this.initializeTransporter();
   }
 
@@ -60,7 +61,7 @@ class EmailService {
   }
 
   /**
-   * Send patient registration data via email
+   * Send patient registration data via email with database integration
    * @param {Object} patientData - The patient registration data
    * @param {string} lang - The form language
    * @returns {Promise<Object>} - Email send result
@@ -69,6 +70,27 @@ class EmailService {
     try {
       if (!patientData) {
         throw new Error("Patient data is required");
+      }
+
+      let dbResult = null;
+
+      // If patient service is available, process and save to database
+      if (this.patientService) {
+        try {
+          dbResult = await this.patientService.processPatientRegistration(
+            patientData
+          );
+          console.log("Patient data saved to database:", {
+            patientId: dbResult.patient.id,
+            isNewPatient: dbResult.isNewPatient,
+          });
+        } catch (dbError) {
+          console.error(
+            "Database save failed, but continuing with email:",
+            dbError
+          );
+          // Continue with email even if database save fails
+        }
       }
 
       const mailOptions = {
@@ -87,10 +109,31 @@ class EmailService {
         info.messageId
       );
 
+      // Record email communication in database if patient service is available
+      if (this.patientService && dbResult?.patient) {
+        try {
+          await this.patientService.recordEmailCommunication(
+            dbResult.patient.id,
+            {
+              subject: mailOptions.subject,
+              html: mailOptions.html,
+              from: mailOptions.from,
+              to: mailOptions.to,
+            }
+          );
+        } catch (commError) {
+          console.error("Failed to record email communication:", commError);
+          // Don't throw error for communication logging failures
+        }
+      }
+
       return {
         success: true,
         message: "Patient registration submitted and email sent successfully",
         messageId: info.messageId,
+        patient: dbResult?.patient || null,
+        isNewPatient: dbResult?.isNewPatient || false,
+        savedToDatabase: !!dbResult,
       };
     } catch (error) {
       console.error("Error sending patient registration email:", error);

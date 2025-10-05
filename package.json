@@ -9,11 +9,15 @@
     "test": "node test-email.js"
   },
   "dependencies": {
+    "@prisma/client": "^6.16.3",
+    "@types/pg": "^8.15.5",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "nodemailer": "^6.9.7",
+    "pg": "^8.16.3",
+    "prisma": "^6.16.3",
     "reflect-metadata": "^0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

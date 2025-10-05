@@ -1,0 +1,114 @@
+// This is your Prisma schema file for the Dental Email Sender application
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Patient model for storing patient information
+model PatientMarketingData {
+  id              String   @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String   @unique
+  phone           String?
+  dateOfBirth     DateTime?
+  emergencyContact Json?    // { name, phone, relationship }
+  streetAddress   String
+  city            String
+  country         String
+  zipCode         String
+  referralChannel String
+  referralChannelDetails String
+  isHipaaConsent  Boolean
+  isTermsAccepted Boolean
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  isActive        Boolean  @default(true)
+  
+  // Relations
+  documents        PatientDocument[]
+  auditLogs        PatientAuditLog[]
+
+  // Indexes
+  @@index([email])
+  @@index([lastName, firstName])
+  @@index([createdAt])
+  @@map("patients")
+}
+
+
+
+// Document storage (forms, images, reports)
+model PatientDocument {
+  id              String   @id @default(uuid())
+  patientId       String
+  
+  // Document details
+  fileName        String
+  originalName    String
+  fileType        String   // application/pdf, image/jpeg, etc.
+  fileSize        Int      // in bytes
+  filePath        String   // storage path
+  
+  // Document classification
+  documentType    String   // questionnaire, xray, treatment_plan, insurance, etc.
+  
+  // Security and compliance
+  isEncrypted     Boolean  @default(false)
+  accessLevel     String   @default("standard") // public, standard, restricted, confidential
+  
+  // Metadata
+  uploadedAt      DateTime @default(now())
+  uploadedBy      String?  // user who uploaded
+  description     String?
+  
+  // Relations
+  patientMarketingData         PatientMarketingData  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([patientId])
+  @@index([documentType])
+  @@index([uploadedAt])
+  @@map("patient_documents")
+}
+
+// Audit logging for HIPAA compliance
+model PatientAuditLog {
+  id              String   @id @default(uuid())
+  patientId       String
+  
+  // Action details
+  action          String   // create, read, update, delete, export, print
+  tableName       String   // which table was affected
+  recordId        String?  // ID of the affected record
+  
+  // User and session
+  userId          String?
+  userName        String?
+  ipAddress       String?
+  userAgent       String?
+  
+  // Change tracking
+  oldValues       Json?    // before change
+  newValues       Json?    // after change
+  
+  // Metadata
+  timestamp       DateTime @default(now())
+  description     String?
+  
+  // Relations
+  patientMarketingData         PatientMarketingData  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  
+  // Indexes
+  @@index([patientId])
+  @@index([timestamp])
+  @@index([action])
+  @@map("patient_audit_logs")
+}
