@@ -1,25 +1,75 @@
-class PatientService {
-  constructor(databaseService) {
+import DatabaseService from "./DatabaseService";
+import { PatientMarketingData, PatientDocument, Prisma } from "@prisma/client";
+
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  dateOfBirth?: string | Date;
+  gender?: string;
+  phone?: string;
+  email: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  zipCode?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelationship?: string;
+  hearAboutUs?: string;
+  referralDetails?: string;
+  hipaaConsent: boolean;
+  treatmentConsent: boolean;
+  signature?: string;
+}
+
+interface PatientRegistrationResult {
+  patient: PatientMarketingData;
+  isNewPatient: boolean;
+}
+
+interface EmailSection {
+  title: string;
+  data: Array<{
+    label: string;
+    value: string;
+  }>;
+}
+
+interface PatientWithDocuments extends PatientMarketingData {
+  documents: PatientDocument[];
+}
+
+export default class PatientService {
+  private db: DatabaseService;
+
+  constructor(databaseService: DatabaseService) {
     this.db = databaseService;
   }
 
   // Process patient registration from form data
-  async processPatientRegistration(formData) {
+  async processPatientRegistration(
+    formData: FormData
+  ): Promise<PatientRegistrationResult> {
     try {
       const {
         firstName,
         lastName,
         dateOfBirth,
-        gender,
         phone,
         email,
         address,
         city,
         country,
         zipCode,
-        emergencyName,
-        emergencyPhone,
-        emergencyRelationship,
+        emergencyContactName,
+        emergencyContactPhone,
+        emergencyContactRelationship,
         hearAboutUs,
         referralDetails,
         hipaaConsent,
@@ -32,61 +82,66 @@ class PatientService {
       let patient = await this.db.findPatientByEmail(email);
 
       // Prepare emergency contact data
-      const emergencyContact = emergencyContactName
-        ? {
-            name: emergencyName,
-            phone: emergencyPhone,
-            relationship: emergencyRelationship,
-          }
-        : null;
 
       const isNewPatient = !patient;
 
       if (!patient) {
         // Create new patient
-        patient = await this.db.createPatient({
+        const newPatient = await this.db.createPatient({
           firstName: firstName,
           lastName: lastName,
           email: email,
-          phone: phone,
+          phone: phone || null,
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-          emergencyContact: emergencyContact,
-          streetAddress: address,
-          city: city,
-          country: country,
-          zipCode: zipCode,
-          gender: gender,
-          referralChannel: hearAboutUs,
-          referralChannelDetails: referralDetails,
+          emergencyContactName: emergencyContactName || "",
+          emergencyContactPhone: emergencyContactPhone || "",
+          emergencyContactRelationship: emergencyContactRelationship || "",
+          streetAddress: address || "",
+          city: city || "",
+          country: country || "",
+          zipCode: zipCode || "",
+          referralChannel: hearAboutUs || "",
+          referralChannelDetails: referralDetails || "",
           isHipaaConsent: hipaaConsent,
           isTermsAccepted: treatmentConsent,
         });
+        patient = { ...newPatient, documents: [] };
       } else {
         // Update existing patient if needed
-        const updateData = {
+        const updateData: Prisma.PatientMarketingDataUpdateInput = {
           phone: phone || patient.phone,
           dateOfBirth: dateOfBirth
             ? new Date(dateOfBirth)
             : patient.dateOfBirth,
-          emergencyContact: emergencyContact || patient.emergencyContact,
+          emergencyContactName:
+            emergencyContactName || patient.emergencyContactName,
+          emergencyContactPhone:
+            emergencyContactPhone || patient.emergencyContactPhone,
+          emergencyContactRelationship:
+            emergencyContactRelationship ||
+            patient.emergencyContactRelationship,
           streetAddress: address || patient.streetAddress,
           city: city || patient.city,
           country: country || patient.country,
-          referralChannel: referralChannel || patient.referralChannel,
+          zipCode: zipCode || patient.zipCode,
+          referralChannel: hearAboutUs || patient.referralChannel,
           referralChannelDetails:
-            referralChannelDetails || patient.referralChannelDetails,
-          isHipaaConsent: isHipaaConsent || patient.isHipaaConsent,
-          isTermsAccepted: isTermsAccepted || patient.isTermsAccepted,
+            referralDetails || patient.referralChannelDetails,
+          isHipaaConsent: hipaaConsent || patient.isHipaaConsent,
+          isTermsAccepted: treatmentConsent || patient.isTermsAccepted,
         };
 
-        patient = await this.db.updatePatient(patient.id, updateData);
+        const updatedPatient = await this.db.updatePatient(
+          patient.id,
+          updateData
+        );
+        patient = { ...updatedPatient, documents: patient.documents };
       }
 
       // Create signature document if provided
-      if (signature && patient.id) {
+      if (signature && patient?.id) {
         try {
-          await this.db.createDocument({
-            patientId: patient.id,
+          await this.db.createDocument(patient.id, {
             documentType: "signature",
             fileName: `signature_${patient.firstName}_${
               patient.lastName
@@ -108,7 +163,7 @@ class PatientService {
       }
 
       return {
-        patient,
+        patient: patient as PatientMarketingData,
         isNewPatient,
       };
     } catch (error) {
@@ -118,22 +173,14 @@ class PatientService {
   }
 
   // Get patient with full medical history
-  async getPatientProfile(email) {
+  async getPatientProfile(email: string): Promise<PatientWithDocuments | null> {
     try {
       const patient = await this.db.findPatientByEmail(email);
       if (!patient) {
         return null;
       }
 
-      // Get latest medical history
-      const latestMedicalHistory = await this.db.findLatestMedicalHistory(
-        patient.id
-      );
-
-      return {
-        ...patient,
-        latestMedicalHistory,
-      };
+      return patient;
     } catch (error) {
       console.error("Error getting patient profile:", error);
       throw error;
@@ -141,7 +188,7 @@ class PatientService {
   }
 
   // Utility methods
-  parseArrayField(fieldValue) {
+  parseArrayField(fieldValue: any): string[] | null {
     if (!fieldValue) return null;
 
     if (Array.isArray(fieldValue)) {
@@ -160,8 +207,11 @@ class PatientService {
   }
 
   // Format patient data for email
-  formatPatientDataForEmail(patient, medicalHistory) {
-    const sections = [];
+  formatPatientDataForEmail(
+    patient: PatientMarketingData,
+    medicalHistory?: any
+  ): EmailSection[] {
+    const sections: EmailSection[] = [];
 
     // Patient Information
     sections.push({
@@ -180,19 +230,25 @@ class PatientService {
     });
 
     // Emergency Contact
-    if (patient.emergencyContact) {
-      sections.push({
-        title: "Emergency Contact",
-        data: [
-          { label: "Name", value: patient.emergencyContact.name },
-          { label: "Phone", value: patient.emergencyContact.phone },
-          {
-            label: "Relationship",
-            value: patient.emergencyContact.relationship,
-          },
-        ],
-      });
-    }
+
+    sections.push({
+      title: "Emergency Contact",
+      data: [
+        {
+          label: "Name",
+          value: patient.emergencyContactName || "Not provided",
+        },
+        {
+          label: "Phone",
+          value: patient.emergencyContactPhone || "Not provided",
+        },
+        {
+          label: "Relationship",
+          value: patient.emergencyContactRelationship || "Not provided",
+        },
+      ],
+    });
+
     // Address
     if (patient.streetAddress || patient.city || patient.country) {
       sections.push({
@@ -204,6 +260,7 @@ class PatientService {
           },
           { label: "City", value: patient.city || "Not provided" },
           { label: "Country", value: patient.country || "Not provided" },
+          { label: "Zip Code", value: patient.zipCode || "Not provided" },
         ],
       });
     }
@@ -224,6 +281,7 @@ class PatientService {
         ],
       });
     }
+
     // Consents
     sections.push({
       title: "Consents",
@@ -239,18 +297,6 @@ class PatientService {
       ],
     });
 
-    //Signature
-    if (patient.signature) {
-      sections.push({
-        title: "Signature",
-        data: [
-          { label: "Signature", value: patient.signature || "Not provided" },
-        ],
-      });
-    }
-
     return sections;
   }
 }
-
-module.exports = PatientService;

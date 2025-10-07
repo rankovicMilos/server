@@ -1,4 +1,4 @@
-const swaggerJSDoc = require("swagger-jsdoc");
+import swaggerJSDoc from "swagger-jsdoc";
 
 const swaggerDefinition = {
   openapi: "3.0.0",
@@ -17,8 +17,8 @@ const swaggerDefinition = {
 
 const options = {
   swaggerDefinition,
-  apis: ["./server.js", "./routes/*.js", "./routes/emailRoutes.js"], // Path to the API routes in your Node.js application
+  apis: ["./server.ts", "./routes/*.ts", "./routes/emailRoutes.ts"], // Path to the API routes in your TypeScript application
 };
 
 const swaggerSpec = swaggerJSDoc(options);
-module.exports = swaggerSpec;
+export default swaggerSpec;

@@ -1,16 +1,18 @@
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const swaggerUI = require("swagger-ui-express");
-const swaggerSpec = require("./swagger/swagger");
-require("dotenv").config();
+import express, { Request, Response } from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
+import swaggerUI from "swagger-ui-express";
+import dotenv from "dotenv";
 
-// Import services and controllers
-const DatabaseService = require("./services/DatabaseService");
-const PatientService = require("./services/PatientService");
-const EmailService = require("./services/EmailService");
-const EmailController = require("./controllers/EmailController");
-const setupEmailRoutes = require("./routes/emailRoutes");
+// Import services and controllers;
+import EmailController from "./controllers/EmailController";
+import DatabaseService from "./services/DatabaseService";
+import PatientService from "./services/PatientService";
+import EmailService from "./services/EmailService";
+import setupEmailRoutes from "./routes/emailRoutes";
+import swaggerSpec from "./swagger/swagger";
+
+dotenv.config();
 
 /**
  * @swagger
@@ -78,7 +80,7 @@ async function startServer() {
     app.use("/api", setupEmailRoutes(emailController));
 
     // Add database health endpoint
-    app.get("/api/db-health", async (req, res) => {
+    app.get("/api/db-health", async (req: Request, res: Response) => {
       try {
         const health = await databaseService.healthCheck();
         const stats = await databaseService.getPatientStats();
@@ -90,14 +92,14 @@ async function startServer() {
         });
       } catch (error) {
         res.status(500).json({
-          database: { status: "unhealthy", error: error.message },
+          database: { status: "unhealthy", error: (error as Error).message },
           timestamp: new Date().toISOString(),
         });
       }
     });
 
     // Root endpoint
-    app.get("/", (req, res) => {
+    app.get("/", (req: Request, res: Response) => {
       res.json({
         message: "Dental Email Sender API with Database",
         version: "2.0.0",

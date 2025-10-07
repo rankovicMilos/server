@@ -1,12 +1,34 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
+import PatientService from "./PatientService";
+
+// Import utils functions - we'll keep these as JS for now and convert later
 const {
   formatPatientDataForEmail,
   formatPatientQuestionnaireForEmail,
 } = require("../lib/utils");
 
-class EmailService {
-  constructor(patientService = null) {
-    this.transporter = null;
+interface EmailResult {
+  success: boolean;
+  message: string;
+  messageId: string;
+  patient?: any;
+  isNewPatient?: boolean;
+  savedToDatabase?: boolean;
+}
+
+interface MailOptions {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}
+
+export default class EmailService {
+  private transporter: nodemailer.Transporter;
+  private patientService: PatientService | null;
+
+  constructor(patientService: PatientService | null = null) {
     this.patientService = patientService;
     this.initializeTransporter();
   }
@@ -14,7 +36,7 @@ class EmailService {
   /**
    * Initialize the email transporter
    */
-  initializeTransporter() {
+  private initializeTransporter(): void {
     this.transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE || "gmail",
       auth: {
@@ -26,24 +48,27 @@ class EmailService {
 
   /**
    * Send dental form data via email
-   * @param {Object} formData - The form data
-   * @param {string} lang - The form language
-   * @returns {Promise<Object>} - Email send result
+   * @param formData - The form data
+   * @param lang - The form language
+   * @returns Email send result
    */
-  async sendMedicalFormEmail(formData, lang) {
+  async sendMedicalFormEmail(
+    formData: any,
+    lang?: string
+  ): Promise<EmailResult> {
     try {
       if (!formData) {
         throw new Error("Form data is required");
       }
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: formData.email || process.env.RECIPIENT_EMAIL,
+      const mailOptions: MailOptions = {
+        from: process.env.EMAIL_USER || "",
+        to: formData.email || process.env.RECIPIENT_EMAIL || "",
         subject: `New Dental Medical Form - ${
           formData.firstName || "Unknown"
         } ${formData.lastName || "Patient"}`,
         html: formatPatientDataForEmail({ formData, lang }),
-        replyTo: process.env.RECIPIENT_EMAIL,
+        replyTo: process.env.RECIPIENT_EMAIL || "",
       };
 
       const info = await this.transporter.sendMail(mailOptions);
@@ -62,11 +87,14 @@ class EmailService {
 
   /**
    * Send patient registration data via email with database integration
-   * @param {Object} patientData - The patient registration data
-   * @param {string} lang - The form language
-   * @returns {Promise<Object>} - Email send result
+   * @param patientData - The patient registration data
+   * @param lang - The form language
+   * @returns Email send result
    */
-  async sendPatientQuestionnaireEmail(patientData, lang) {
+  async sendPatientQuestionnaireEmail(
+    patientData: any,
+    lang?: string
+  ): Promise<EmailResult> {
     try {
       if (!patientData) {
         throw new Error("Patient data is required");
@@ -93,8 +121,8 @@ class EmailService {
         }
       }
 
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
+      const mailOptions: MailOptions = {
+        from: process.env.EMAIL_USER || "",
         to: process.env.RECIPIENT_EMAIL || "dentist@example.com",
         subject: `New Patient Registration - ${
           patientData.firstName || "Unknown"
@@ -108,24 +136,6 @@ class EmailService {
         "Patient registration email sent successfully:",
         info.messageId
       );
-
-      // Record email communication in database if patient service is available
-      if (this.patientService && dbResult?.patient) {
-        try {
-          await this.patientService.recordEmailCommunication(
-            dbResult.patient.id,
-            {
-              subject: mailOptions.subject,
-              html: mailOptions.html,
-              from: mailOptions.from,
-              to: mailOptions.to,
-            }
-          );
-        } catch (commError) {
-          console.error("Failed to record email communication:", commError);
-          // Don't throw error for communication logging failures
-        }
-      }
 
       return {
         success: true,
@@ -143,17 +153,17 @@ class EmailService {
 
   /**
    * Check if the email service is configured properly
-   * @returns {boolean} - True if configured, false otherwise
+   * @returns True if configured, false otherwise
    */
-  isConfigured() {
+  isConfigured(): boolean {
     return !!(process.env.EMAIL_USER && process.env.EMAIL_PASSWORD);
   }
 
   /**
    * Verify the email transporter connection
-   * @returns {Promise<boolean>} - True if connection is successful
+   * @returns True if connection is successful
    */
-  async verifyConnection() {
+  async verifyConnection(): Promise<boolean> {
     try {
       await this.transporter.verify();
       return true;
@@ -163,5 +173,3 @@ class EmailService {
     }
   }
 }
-
-module.exports = EmailService;

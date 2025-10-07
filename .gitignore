@@ -4,3 +4,13 @@
 /test-email.js
 /generated/prisma
 prisma/migrations/migration_lock.toml
+
+# TypeScript build output
+/dist
+*.tsbuildinfo
+
+# Type declaration files (if auto-generated)
+# *.d.ts
+
+# Source maps (optional - remove if you want to include them)
+# *.map

@@ -1,6 +1,31 @@
-const { PrismaClient } = require("@prisma/client");
+import {
+  PrismaClient,
+  PatientMarketingData,
+  PatientDocument,
+  PatientAuditLog,
+  Prisma,
+} from "@prisma/client";
 
-class DatabaseService {
+interface HealthCheckResult {
+  status: "healthy" | "unhealthy";
+  timestamp: string;
+  error?: string;
+}
+
+interface PatientStats {
+  totalPatients: number;
+  activePatients: number;
+  totalDocuments: number;
+  totalAuditLogs: number;
+}
+
+interface PatientWithDocuments extends PatientMarketingData {
+  documents: PatientDocument[];
+}
+
+export default class DatabaseService {
+  private prisma: PrismaClient;
+
   constructor() {
     this.prisma = new PrismaClient({
       log: ["query", "info", "warn", "error"],
@@ -8,7 +33,7 @@ class DatabaseService {
   }
 
   // Initialize database connection
-  async initialize() {
+  async initialize(): Promise<void> {
     try {
       await this.prisma.$connect();
       console.log("✅ Database connected successfully");
@@ -19,12 +44,14 @@ class DatabaseService {
   }
 
   // Close database connection
-  async close() {
+  async close(): Promise<void> {
     await this.prisma.$disconnect();
   }
 
   // Patient operations
-  async createPatient(patientData) {
+  async createPatient(
+    patientData: Prisma.PatientMarketingDataCreateInput
+  ): Promise<PatientMarketingData> {
     try {
       const patient = await this.prisma.patientMarketingData.create({
         data: patientData,
@@ -44,7 +71,9 @@ class DatabaseService {
     }
   }
 
-  async findPatientByEmail(email) {
+  async findPatientByEmail(
+    email: string
+  ): Promise<PatientWithDocuments | null> {
     try {
       return await this.prisma.patientMarketingData.findUnique({
         where: { email },
@@ -58,7 +87,10 @@ class DatabaseService {
     }
   }
 
-  async updatePatient(id, updateData) {
+  async updatePatient(
+    id: string,
+    updateData: Prisma.PatientMarketingDataUpdateInput
+  ): Promise<PatientMarketingData> {
     try {
       const oldPatient = await this.prisma.patientMarketingData.findUnique({
         where: { id },
@@ -83,13 +115,23 @@ class DatabaseService {
   }
 
   // Document operations
-  async createDocument(documentData) {
+  async createDocument(
+    patientId: string,
+    documentData: Omit<
+      Prisma.PatientDocumentCreateInput,
+      "patientMarketingData"
+    >
+  ): Promise<PatientDocument> {
     try {
       const document = await this.prisma.patientDocument.create({
-        data: documentData,
+        data: {
+          ...documentData,
+          patientId,
+        },
       });
+
       await this.logPatientAction(
-        documentData.patientId,
+        patientId,
         "create",
         "patient_documents",
         document.id,
@@ -105,14 +147,14 @@ class DatabaseService {
 
   // Audit logging
   async logPatientAction(
-    patientId,
-    action,
-    tableName,
-    recordId,
-    oldValues,
-    newValues,
-    userId = null
-  ) {
+    patientId: string,
+    action: string,
+    tableName: string,
+    recordId: string,
+    oldValues: any = null,
+    newValues: any = null,
+    userId: string | null = null
+  ): Promise<void> {
     try {
       await this.prisma.patientAuditLog.create({
         data: {
@@ -120,8 +162,8 @@ class DatabaseService {
           action,
           tableName,
           recordId,
-          oldValues: oldValues ? JSON.stringify(oldValues) : null,
-          newValues: newValues ? JSON.stringify(newValues) : null,
+          oldValues: oldValues ? JSON.stringify(oldValues) : Prisma.JsonNull,
+          newValues: newValues ? JSON.stringify(newValues) : Prisma.JsonNull,
           userId,
           description: `${action.toUpperCase()} operation on ${tableName}`,
         },
@@ -133,7 +175,7 @@ class DatabaseService {
   }
 
   // Utility methods
-  async getPatientStats() {
+  async getPatientStats(): Promise<PatientStats> {
     try {
       const [totalPatients, activePatients, totalDocuments, totalAuditLogs] =
         await Promise.all([
@@ -156,7 +198,7 @@ class DatabaseService {
   }
 
   // Health check
-  async healthCheck() {
+  async healthCheck(): Promise<HealthCheckResult> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return { status: "healthy", timestamp: new Date().toISOString() };
@@ -164,11 +206,9 @@ class DatabaseService {
       console.error("Database health check failed:", error);
       return {
         status: "unhealthy",
-        error: error.message,
+        error: (error as Error).message,
         timestamp: new Date().toISOString(),
       };
     }
   }
 }
-
-module.exports = DatabaseService;

@@ -18,7 +18,9 @@ model PatientMarketingData {
   email           String   @unique
   phone           String?
   dateOfBirth     DateTime?
-  emergencyContact Json?    // { name, phone, relationship }
+  emergencyContactName       String
+  emergencyContactPhone      String
+  emergencyContactRelationship String
   streetAddress   String
   city            String
   country         String
@@ -43,7 +45,54 @@ model PatientMarketingData {
   @@map("patients")
 }
 
+model PatientMedicalData {
+  id              String   @id @default(uuid())
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime?
+  phone           String?
+  email           String?  @unique
+  
+  // Medical details
+  epilepsy         Boolean @default(false)
+  jaundice         Boolean @default(false)
+  hypertenion      Boolean @default(false)
 
+  pastIllnesses    String   @default("") // comma-separated list
+  chronicDiseases String   @default("") // comma-separated list
+  implants String   @default("") // comma-separated list
+  infectionHistory String   @default("") // comma-separated list
+  bleedsLongerAfterCuts String   @default("") // comma-separated list
+  bleedingDisorders String   @default("") // comma-separated list
+
+  hypercoagulableState Boolean @default(false)
+  bronchialAsthma Boolean @default(false)
+
+  tuberculosisHistory String @default("")
+  pepticUlcerSites String @default("")
+
+  otherDiseases String @default("")
+  currentMedications String @default("")
+  surgeriesHistory String @default("")
+
+  cigarettesPerDay Int @default(0)
+  drinksAlcoholDaily Boolean @default(false)
+  usesDrugs Boolean @default(false)
+
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  
+  // Indexes
+  @@index([id])
+  
+  @@index([email])
+  @@index([lastName, firstName])
+  @@map("patient_medical_data")
+
+
+}
 
 // Document storage (forms, images, reports)
 model PatientDocument {
