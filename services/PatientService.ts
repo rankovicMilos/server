@@ -46,7 +46,7 @@ interface PatientWithDocuments extends PatientMarketingData {
 }
 
 export default class PatientService {
-  private db: DatabaseService;
+  private readonly db: DatabaseService;
 
   constructor(databaseService: DatabaseService) {
     this.db = databaseService;

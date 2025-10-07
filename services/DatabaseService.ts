@@ -2,7 +2,6 @@ import {
   PrismaClient,
   PatientMarketingData,
   PatientDocument,
-  PatientAuditLog,
   Prisma,
 } from "@prisma/client";
 
@@ -24,7 +23,7 @@ interface PatientWithDocuments extends PatientMarketingData {
 }
 
 export default class DatabaseService {
-  private prisma: PrismaClient;
+  private readonly prisma: PrismaClient;
 
   constructor() {
     this.prisma = new PrismaClient({

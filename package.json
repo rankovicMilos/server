@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server.ts",
     "dev": "nodemon --exec ts-node server.ts",
     "test": "ts-node test-email.ts",
     "prod": "npm run build && npm start"

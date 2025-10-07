@@ -1,11 +1,9 @@
 import nodemailer from "nodemailer";
 import PatientService from "./PatientService";
-
-// Import utils functions - we'll keep these as JS for now and convert later
-const {
+import {
   formatPatientDataForEmail,
   formatPatientQuestionnaireForEmail,
-} = require("../lib/utils");
+} from "../lib/utils";
 
 interface EmailResult {
   success: boolean;
@@ -26,7 +24,7 @@ interface MailOptions {
 
 export default class EmailService {
   private transporter: nodemailer.Transporter;
-  private patientService: PatientService | null;
+  private readonly patientService: PatientService | null;
 
   constructor(patientService: PatientService | null = null) {
     this.patientService = patientService;
@@ -67,7 +65,7 @@ export default class EmailService {
         subject: `New Dental Medical Form - ${
           formData.firstName || "Unknown"
         } ${formData.lastName || "Patient"}`,
-        html: formatPatientDataForEmail({ formData, lang }),
+        html: formatPatientDataForEmail({ formData }, lang || "en"),
         replyTo: process.env.RECIPIENT_EMAIL || "",
       };
 
@@ -127,7 +125,7 @@ export default class EmailService {
         subject: `New Patient Registration - ${
           patientData.firstName || "Unknown"
         } ${patientData.lastName || "Patient"}`,
-        html: formatPatientQuestionnaireForEmail({ patientData }, lang),
+        html: formatPatientQuestionnaireForEmail({ patientData }, lang || "en"),
         replyTo: patientData.email,
       };
 

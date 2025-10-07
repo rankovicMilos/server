@@ -1,7 +1,38 @@
+// Type definitions
+interface FormField {
+  key: string;
+  label: string;
+  type: string; // Made more flexible
+  defaultValue?: string;
+}
+
+interface FormSection {
+  title: string;
+  fields: FormField[];
+}
+
+interface FormSections {
+  [key: string]: FormSection;
+}
+
+interface FormatData {
+  formData: any;
+}
+
+interface PatientFormatData {
+  patientData: any;
+}
+
+interface AdvancedFormatOptions {
+  includeEmptyFields?: boolean;
+  customStyles?: boolean;
+  compactMode?: boolean;
+}
+
 /**
  * Configuration for form field sections
  */
-const FORM_SECTIONS = {
+const FORM_SECTIONS: FormSections = {
   personal: {
     title: "Personal Information",
     fields: [
@@ -138,33 +169,36 @@ const PATIENT_QUESTIONNAIRE_SECTIONS = {
 
 /**
  * Formats patient data for email with improved structure and readability
- * @param {Object} formatData - Object containing formData
- * @param {string} lang - Language code
- * @returns {string} Formatted HTML email content
+ * @param formatData - Object containing formData
+ * @param lang - Language code
+ * @returns Formatted HTML email content
  */
-const formatPatientDataForEmail = (formatData, lang) => {
+const formatPatientDataForEmail = (
+  formatData: FormatData,
+  lang: string
+): string => {
   console.log("Formatting patient data for email:", formatData);
   const { formData } = formatData;
 
   // Helper functions
-  const formatArray = (arr) => {
+  const formatArray = (arr: any): string => {
     if (!arr || !Array.isArray(arr)) return "None";
     return arr.length > 0 ? arr.join(", ") : "None";
   };
 
-  const formatBoolean = (value) => (value ? "Yes" : "No");
+  const formatBoolean = (value: any): string => (value ? "Yes" : "No");
 
-  const formatNumber = (value, defaultValue = "Not specified") =>
+  const formatNumber = (value: any, defaultValue = "Not specified"): string =>
     value !== null && value !== undefined ? value.toString() : defaultValue;
 
-  const formatText = (value, defaultValue = "Not provided") =>
+  const formatText = (value: any, defaultValue = "Not provided"): string =>
     value || defaultValue;
 
-  const createListItem = (label, value) =>
+  const createListItem = (label: string, value: string): string =>
     `<li><strong>${label}:</strong> ${value}</li>`;
 
   // Format field based on type
-  const formatFieldValue = (field, formData) => {
+  const formatFieldValue = (field: FormField, formData: any): string => {
     const value = formData[field.key];
 
     switch (field.type) {
@@ -181,7 +215,7 @@ const formatPatientDataForEmail = (formatData, lang) => {
   };
 
   // Handle special case for name formatting
-  const formatName = (formData) => {
+  const formatName = (formData: any): string => {
     const firstName = formatText(formData.firstName);
     const lastName = formatText(formData.lastName, "");
     return firstName === "Not provided" && lastName === ""
@@ -190,8 +224,11 @@ const formatPatientDataForEmail = (formatData, lang) => {
   };
 
   // Generate sections
-  const generateSection = (sectionKey, section) => {
-    let fields;
+  const generateSection = (
+    sectionKey: string,
+    section: FormSection
+  ): string => {
+    let fields: string[];
 
     // Special handling for personal info (name combination)
     if (sectionKey === "personal") {
@@ -199,12 +236,12 @@ const formatPatientDataForEmail = (formatData, lang) => {
         createListItem("Name", formatName(formData)),
         ...section.fields
           .slice(2)
-          .map((field) =>
+          .map((field: FormField) =>
             createListItem(field.label, formatFieldValue(field, formData))
           ),
       ];
     } else {
-      fields = section.fields.map((field) =>
+      fields = section.fields.map((field: FormField) =>
         createListItem(field.label, formatFieldValue(field, formData))
       );
     }
@@ -240,25 +277,28 @@ const formatPatientDataForEmail = (formatData, lang) => {
 
 /**
  * Formats patient registration data for email
- * @param {Object} formatData - Object containing patientData
- * @param {string} lang - Language code
- * @returns {string} Formatted HTML email content
+ * @param formatData - Object containing patientData
+ * @param lang - Language code
+ * @returns Formatted HTML email content
  */
-const formatPatientQuestionnaireForEmail = (formatData, lang) => {
+const formatPatientQuestionnaireForEmail = (
+  formatData: PatientFormatData,
+  lang: string
+): string => {
   console.log("Formatting patient registration data for email:", formatData);
   const { patientData } = formatData;
 
   // Helper functions
-  const formatText = (value, defaultValue = "Not provided") =>
+  const formatText = (value: any, defaultValue = "Not provided"): string =>
     value || defaultValue;
 
-  const formatBoolean = (value) => (value ? "Yes" : "No");
+  const formatBoolean = (value: any): string => (value ? "Yes" : "No");
 
-  const createListItem = (label, value) =>
+  const createListItem = (label: string, value: string): string =>
     `<li><strong>${label}:</strong> ${value}</li>`;
 
   // Format field based on type
-  const formatFieldValue = (field, patientData) => {
+  const formatFieldValue = (field: FormField, patientData: any): string => {
     const value = patientData[field.key];
 
     switch (field.type) {
@@ -271,7 +311,7 @@ const formatPatientQuestionnaireForEmail = (formatData, lang) => {
   };
 
   // Handle special case for name formatting
-  const formatName = (patientData) => {
+  const formatName = (patientData: any): string => {
     const firstName = formatText(patientData.firstName);
     const lastName = formatText(patientData.lastName, "");
     return firstName === "Not provided" && lastName === ""
@@ -280,22 +320,25 @@ const formatPatientQuestionnaireForEmail = (formatData, lang) => {
   };
 
   // Handle address formatting
-  const formatAddress = (patientData) => {
+  const formatAddress = (patientData: any): string => {
     const address = formatText(patientData.address, "");
     const city = formatText(patientData.city, "");
     const state = formatText(patientData.state, "");
     const zipCode = formatText(patientData.zipCode, "");
 
     const addressParts = [address, city, state, zipCode].filter(
-      (part) => part !== "" && part !== "Not provided"
+      (part: string) => part !== "" && part !== "Not provided"
     );
 
     return addressParts.length > 0 ? addressParts.join(", ") : "Not provided";
   };
 
   // Generate sections
-  const generateSection = (sectionKey, section) => {
-    let fields;
+  const generateSection = (
+    sectionKey: string,
+    section: FormSection
+  ): string => {
+    let fields: string[];
 
     // Special handling for different sections
     if (sectionKey === "personal") {
@@ -303,19 +346,19 @@ const formatPatientQuestionnaireForEmail = (formatData, lang) => {
         createListItem("Name", formatName(patientData)),
         ...section.fields
           .slice(2) // Skip firstName and lastName as they're combined
-          .map((field) =>
+          .map((field: FormField) =>
             createListItem(field.label, formatFieldValue(field, patientData))
           ),
       ];
     } else if (sectionKey === "address") {
       fields = [
         createListItem("Full Address", formatAddress(patientData)),
-        ...section.fields.map((field) =>
+        ...section.fields.map((field: FormField) =>
           createListItem(field.label, formatFieldValue(field, patientData))
         ),
       ];
     } else {
-      fields = section.fields.map((field) =>
+      fields = section.fields.map((field: FormField) =>
         createListItem(field.label, formatFieldValue(field, patientData))
       );
     }
@@ -343,12 +386,16 @@ const formatPatientQuestionnaireForEmail = (formatData, lang) => {
 };
 /**
  * Enhanced email formatting utility with additional helper functions
- * @param {Object} formatData - Object containing formData
- * @param {string} lang - Language code
- * @param {Object} options - Additional formatting options
- * @returns {string} Formatted HTML email content
+ * @param formatData - Object containing formData
+ * @param lang - Language code
+ * @param options - Additional formatting options
+ * @returns Formatted HTML email content
  */
-const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
+const formatPatientDataForEmailAdvanced = (
+  formatData: FormatData,
+  lang: string,
+  options: AdvancedFormatOptions = {}
+): string => {
   const {
     includeEmptyFields = false,
     customStyles = false,
@@ -359,24 +406,35 @@ const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
   const { formData } = formatData;
 
   // Helper functions
-  const formatArray = (arr) => {
+  const formatArray = (arr: any): string | null => {
     if (!arr || !Array.isArray(arr)) return includeEmptyFields ? "None" : null;
-    return arr.length > 0 ? arr.join(", ") : includeEmptyFields ? "None" : null;
+    if (arr.length > 0) {
+      return arr.join(", ");
+    }
+    return includeEmptyFields ? "None" : null;
   };
 
-  const formatBoolean = (value) => (value ? "Yes" : "No");
+  const formatBoolean = (value: any): string => (value ? "Yes" : "No");
 
-  const formatNumber = (value, defaultValue = "Not specified") =>
-    value !== null && value !== undefined
-      ? value.toString()
-      : includeEmptyFields
-      ? defaultValue
-      : null;
+  const formatNumber = (
+    value: any,
+    defaultValue = "Not specified"
+  ): string | null => {
+    if (value !== null && value !== undefined) {
+      return value.toString();
+    }
+    return includeEmptyFields ? defaultValue : null;
+  };
 
-  const formatText = (value, defaultValue = "Not provided") =>
-    value || (includeEmptyFields ? defaultValue : null);
+  const formatText = (
+    value: any,
+    defaultValue = "Not provided"
+  ): string | null => value || (includeEmptyFields ? defaultValue : null);
 
-  const createListItem = (label, value) => {
+  const createListItem = (
+    label: string,
+    value: string | null
+  ): string | null => {
     if (
       !includeEmptyFields &&
       (value === null || value === "Not provided" || value === "None")
@@ -388,8 +446,11 @@ const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
       : `<li><strong>${label}:</strong> ${value}</li>`;
   };
 
-  // Format field based on type
-  const formatFieldValue = (field, formData) => {
+  // Format field based on type (advanced version with nullable returns)
+  const formatFieldValueAdvanced = (
+    field: FormField,
+    formData: any
+  ): string | null => {
     const value = formData[field.key];
 
     switch (field.type) {
@@ -406,7 +467,7 @@ const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
   };
 
   // Handle special case for name formatting
-  const formatName = (formData) => {
+  const formatName = (formData: any): string | null => {
     const firstName = formatText(formData.firstName);
     const lastName = formatText(formData.lastName, "");
 
@@ -424,26 +485,31 @@ const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
   };
 
   // Generate sections with filtering
-  const generateSection = (sectionKey, section) => {
-    let fields;
+  const generateSection = (
+    sectionKey: string,
+    section: FormSection
+  ): string => {
+    let fields: (string | null)[];
 
     // Special handling for personal info (name combination)
     if (sectionKey === "personal") {
       const nameItem = createListItem("Name", formatName(formData));
       const otherFields = section.fields
         .slice(2)
-        .map((field) =>
-          createListItem(field.label, formatFieldValue(field, formData))
+        .map((field: FormField) =>
+          createListItem(field.label, formatFieldValueAdvanced(field, formData))
         )
-        .filter((item) => item !== null);
+        .filter((item: string | null) => item !== null);
 
-      fields = [nameItem, ...otherFields].filter((item) => item !== null);
+      fields = [nameItem, ...otherFields].filter(
+        (item: string | null) => item !== null
+      );
     } else {
       fields = section.fields
-        .map((field) =>
-          createListItem(field.label, formatFieldValue(field, formData))
+        .map((field: FormField) =>
+          createListItem(field.label, formatFieldValueAdvanced(field, formData))
         )
-        .filter((item) => item !== null);
+        .filter((item: string | null) => item !== null);
     }
 
     // Don't include section if no fields
@@ -496,7 +562,7 @@ const formatPatientDataForEmailAdvanced = (formatData, lang, options = {}) => {
   `;
 };
 
-module.exports = {
+export {
   formatPatientDataForEmail,
   formatPatientDataForEmailAdvanced,
   formatPatientQuestionnaireForEmail,

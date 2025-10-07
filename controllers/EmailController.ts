@@ -6,7 +6,7 @@ import EmailService from "../services/EmailService";
  * Handles HTTP requests related to email operations
  */
 export default class EmailController {
-  private emailService: EmailService;
+  private readonly emailService: EmailService;
 
   constructor(emailService: EmailService) {
     this.emailService = emailService;
