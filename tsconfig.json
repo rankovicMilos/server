@@ -18,6 +18,6 @@
     "declarationMap": true,
     "sourceMap": true
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "lib/emailTemplate.ts"],
   "exclude": ["node_modules", "dist", "**/*.js"]
 }

@@ -4,6 +4,8 @@ import {
   formatPatientDataForEmail,
   formatPatientQuestionnaireForEmail,
 } from "../lib/utils";
+import { EmailFormData } from "../models/EmailFormData";
+import { EmailTemplate } from "../lib/emailTemplate";
 
 interface EmailResult {
   success: boolean;
@@ -20,6 +22,12 @@ interface MailOptions {
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string | Buffer;
+    encoding?: string;
+    cid?: string; // Content ID for inline use
+  }>;
 }
 
 export default class EmailService {
@@ -90,7 +98,7 @@ export default class EmailService {
    * @returns Email send result
    */
   async sendPatientQuestionnaireEmail(
-    patientData: any,
+    patientData: EmailFormData,
     lang?: string
   ): Promise<EmailResult> {
     try {
@@ -125,7 +133,7 @@ export default class EmailService {
         subject: `New Patient Registration - ${
           patientData.firstName || "Unknown"
         } ${patientData.lastName || "Patient"}`,
-        html: formatPatientQuestionnaireForEmail({ patientData }, lang || "en"),
+        html: EmailTemplate({ data: patientData }),
         replyTo: patientData.email,
       };
 

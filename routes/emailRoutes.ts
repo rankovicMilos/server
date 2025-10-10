@@ -110,6 +110,9 @@ function setupEmailRoutes(emailController: EmailController): express.Router {
    *                   phone:
    *                     type: string
    *                     description: Patient's phone number
+   *                   gender:
+   *                     type: string
+   *                     description: Patient's gender
    *                   dateOfBirth:
    *                     type: string
    *                     description: Patient's date of birth
@@ -148,10 +151,7 @@ function setupEmailRoutes(emailController: EmailController): express.Router {
    *                     description: Treatment consent given
    *                   signature:
    *                     type: string
-   *                     description: Digital signature data
-   *               lang:
-   *                 type: string
-   *                 description: Form language (optional)
+   *                     description: Digital signature data (Base64 encoded image)
    *     responses:
    *       200:
    *         description: Patient data processed and email sent successfully

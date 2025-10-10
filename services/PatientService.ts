@@ -1,32 +1,6 @@
+import { EmailFormData } from "../models/EmailFormData";
 import DatabaseService from "./DatabaseService";
 import { PatientMarketingData, PatientDocument, Prisma } from "@prisma/client";
-
-interface EmergencyContact {
-  name: string;
-  phone: string;
-  relationship: string;
-}
-
-interface FormData {
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string | Date;
-  gender?: string;
-  phone?: string;
-  email: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  zipCode?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  emergencyContactRelationship?: string;
-  hearAboutUs?: string;
-  referralDetails?: string;
-  hipaaConsent: boolean;
-  treatmentConsent: boolean;
-  signature?: string;
-}
 
 interface PatientRegistrationResult {
   patient: PatientMarketingData;
@@ -54,92 +28,46 @@ export default class PatientService {
 
   // Process patient registration from form data
   async processPatientRegistration(
-    formData: FormData
+    formData: EmailFormData
   ): Promise<PatientRegistrationResult> {
     try {
-      const {
-        firstName,
-        lastName,
-        dateOfBirth,
-        phone,
-        email,
-        address,
-        city,
-        country,
-        zipCode,
-        emergencyContactName,
-        emergencyContactPhone,
-        emergencyContactRelationship,
-        hearAboutUs,
-        referralDetails,
-        hipaaConsent,
-        treatmentConsent,
-        signature,
-      } = formData;
       console.log("Processing registration for:", formData);
 
       // Check if patient already exists
-      let patient = await this.db.findPatientByEmail(email);
+      let patient = await this.db.findPatientByEmail(formData.email);
 
       // Prepare emergency contact data
 
-      const isNewPatient = !patient;
+      const isNewPatient = true;
 
       if (!patient) {
         // Create new patient
         const newPatient = await this.db.createPatient({
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone || null,
-          dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-          emergencyContactName: emergencyContactName || "",
-          emergencyContactPhone: emergencyContactPhone || "",
-          emergencyContactRelationship: emergencyContactRelationship || "",
-          streetAddress: address || "",
-          city: city || "",
-          country: country || "",
-          zipCode: zipCode || "",
-          referralChannel: hearAboutUs || "",
-          referralChannelDetails: referralDetails || "",
-          isHipaaConsent: hipaaConsent,
-          isTermsAccepted: treatmentConsent,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone || null,
+          dateOfBirth: formData.dateOfBirth
+            ? new Date(formData.dateOfBirth)
+            : null,
+          emergencyContactName: formData.emergencyContactName || "",
+          emergencyContactPhone: formData.emergencyContactPhone || "",
+          emergencyContactRelationship:
+            formData.emergencyContactRelationship || "",
+          streetAddress: formData.address || "",
+          city: formData.city || "",
+          country: formData.country || "",
+          zipCode: formData.zipCode || "",
+          referralChannel: formData.hearAboutUs || "",
+          referralChannelDetails: formData.referralDetails || "",
+          isHipaaConsent: formData.hipaaConsent,
+          isTermsAccepted: formData.treatmentConsent,
         });
         patient = { ...newPatient, documents: [] };
-      } else {
-        // Update existing patient if needed
-        const updateData: Prisma.PatientMarketingDataUpdateInput = {
-          phone: phone || patient.phone,
-          dateOfBirth: dateOfBirth
-            ? new Date(dateOfBirth)
-            : patient.dateOfBirth,
-          emergencyContactName:
-            emergencyContactName || patient.emergencyContactName,
-          emergencyContactPhone:
-            emergencyContactPhone || patient.emergencyContactPhone,
-          emergencyContactRelationship:
-            emergencyContactRelationship ||
-            patient.emergencyContactRelationship,
-          streetAddress: address || patient.streetAddress,
-          city: city || patient.city,
-          country: country || patient.country,
-          zipCode: zipCode || patient.zipCode,
-          referralChannel: hearAboutUs || patient.referralChannel,
-          referralChannelDetails:
-            referralDetails || patient.referralChannelDetails,
-          isHipaaConsent: hipaaConsent || patient.isHipaaConsent,
-          isTermsAccepted: treatmentConsent || patient.isTermsAccepted,
-        };
-
-        const updatedPatient = await this.db.updatePatient(
-          patient.id,
-          updateData
-        );
-        patient = { ...updatedPatient, documents: patient.documents };
       }
 
       // Create signature document if provided
-      if (signature && patient?.id) {
+      if (formData.signature && patient?.id) {
         try {
           await this.db.createDocument(patient.id, {
             documentType: "signature",
@@ -150,7 +78,7 @@ export default class PatientService {
               patient.lastName
             }_${Date.now()}.png`,
             fileType: "image/png",
-            fileSize: signature.length,
+            fileSize: formData.signature.length,
             filePath: `/signatures/${patient.id}/`,
             isEncrypted: false,
             accessLevel: "private",
