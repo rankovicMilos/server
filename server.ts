@@ -39,7 +39,7 @@ const corsOptions: cors.CorsOptions = {
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error("Not allowed by CORS"));
   },
-  credentials: true, // if you ever use cookies/Authorization
+  credentials: false, // if you ever use cookies/Authorization
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
