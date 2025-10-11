@@ -27,39 +27,41 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const corsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) => {
-    const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-      .split(",")
-      .map((o) => o.trim());
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  optionsSuccessStatus: 200,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  credentials: true,
-};
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 // Middleware
-app.use(
-  cors({
-    origin: "https://confidentform.netlify.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-Requested-With",
-      "Accept",
-      "Origin",
-    ],
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin(origin, cb) {
+    // allow non-browser or same-origin requests (no Origin header)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+  credentials: true, // if you ever use cookies/Authorization
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  optionsSuccessStatus: 200,
+};
+
+// ✅ apply the correct options
+app.use(cors(corsOptions));
+
+// (optional but nice) ensure Vary header for caches
+app.use((req, res, next) => {
+  res.header("Vary", "Origin");
+  next();
+});
+
+// ✅ handle preflight quickly
+app.options("*", cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
