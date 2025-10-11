@@ -48,7 +48,20 @@ const corsOptions = {
   credentials: true,
 };
 // Middleware
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: "https://confidentform.netlify.app",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
