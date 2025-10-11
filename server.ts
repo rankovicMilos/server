@@ -11,6 +11,7 @@ import PatientService from "./services/PatientService";
 import EmailService from "./services/EmailService";
 import setupEmailRoutes from "./routes/emailRoutes";
 import swaggerSpec from "./swagger/swagger";
+import { METHODS } from "http";
 
 dotenv.config();
 
@@ -27,9 +28,27 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+const corsOptions = {
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => {
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+      .split(",")
+      .map((o) => o.trim());
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  optionsSuccessStatus: 200,
+  METHODS: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  credentials: true,
+};
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
