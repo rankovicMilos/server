@@ -27,19 +27,34 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
-// Middleware
+
+// CORS configuration for Vercel deployment
 const corsOptions: cors.CorsOptions = {
-  origin(origin, cb) {
-    // allow non-browser or same-origin requests (no Origin header)
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      process.env.FRONTEND_URL,
+    ].filter(Boolean);
+
+    console.log(`🌐 CORS Check - Origin: ${origin || "no origin"}`);
+    console.log(`🌐 Allowed Origins: ${allowedOrigins.join(", ")}`);
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) {
+      console.log("✅ CORS: Request with no origin allowed");
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ CORS: Origin ${origin} allowed`);
+      callback(null, true);
+    } else {
+      console.log(`❌ CORS: Origin ${origin} blocked`);
+      callback(new Error(`Not allowed by CORS: ${origin}`));
+    }
   },
-  credentials: false, // if you ever use cookies/Authorization
+  credentials: false, // Important for Vercel/Netlify
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
