@@ -11,7 +11,6 @@ import PatientService from "./services/PatientService";
 import EmailService from "./services/EmailService";
 import setupEmailRoutes from "./routes/emailRoutes";
 import swaggerSpec from "./swagger/swagger";
-import { METHODS } from "http";
 
 dotenv.config();
 
@@ -51,7 +50,6 @@ const corsOptions = {
 app.use(
   cors({
     origin: "https://confidentform.netlify.app",
-    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
