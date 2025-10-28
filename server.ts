@@ -34,27 +34,24 @@ const corsOptions: cors.CorsOptions = {
     const allowedOrigins = [
       "http://localhost:3000",
       "http://localhost:5173",
+      "https://dental-form-vert.vercel.app", // ✅ add this
       process.env.FRONTEND_URL,
-    ].filter(Boolean);
+    ].filter(Boolean) as string[];
 
     console.log(`🌐 CORS Check - Origin: ${origin || "no origin"}`);
     console.log(`🌐 Allowed Origins: ${allowedOrigins.join(", ")}`);
 
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) {
-      console.log("✅ CORS: Request with no origin allowed");
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true); // Postman/curl etc.
 
-    if (allowedOrigins.includes(origin)) {
-      console.log(`✅ CORS: Origin ${origin} allowed`);
-      callback(null, true);
-    } else {
-      console.log(`❌ CORS: Origin ${origin} blocked`);
-      callback(new Error(`Not allowed by CORS: ${origin}`));
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    // (Optional) allow Vercel preview URLs
+    const vercelPreview = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
+    if (vercelPreview.test(origin)) return callback(null, true);
+
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
-  credentials: false, // Important for Vercel/Netlify
+  credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: [
     "Content-Type",
