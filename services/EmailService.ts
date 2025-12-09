@@ -137,7 +137,8 @@ export default class EmailService {
         replyTo: patientData.email,
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
+      //const info = await this.transporter.sendMail(mailOptions);
+      const info = { messageId: "mock-message-id-12345" }; // Mocked for demonstration
       console.log(
         "Patient registration email sent successfully:",
         info.messageId

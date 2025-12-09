@@ -1,6 +1,6 @@
 import { EmailFormData } from "../models/EmailFormData";
-import DatabaseService from "./DatabaseService";
-import { PatientMarketingData, PatientDocument, Prisma } from "@prisma/client";
+import PatientMarketingData from "../models/PatientMarketingData";
+import MySqlDatabaseService from "./MySqlMarketingDatabaseService";
 
 interface PatientRegistrationResult {
   patient: PatientMarketingData;
@@ -15,14 +15,10 @@ interface EmailSection {
   }>;
 }
 
-interface PatientWithDocuments extends PatientMarketingData {
-  documents: PatientDocument[];
-}
-
 export default class PatientService {
-  private readonly db: DatabaseService;
+  private readonly db: MySqlDatabaseService;
 
-  constructor(databaseService: DatabaseService) {
+  constructor(databaseService: MySqlDatabaseService) {
     this.db = databaseService;
   }
 
@@ -46,15 +42,13 @@ export default class PatientService {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: formData.phone || null,
-          dateOfBirth: formData.dateOfBirth
-            ? new Date(formData.dateOfBirth)
-            : null,
+          phone: formData.phone || "",
+          gender: formData.gender || "",
+          dateOfBirth: new Date(formData.dateOfBirth),
           emergencyContactName: formData.emergencyContactName || "",
           emergencyContactPhone: formData.emergencyContactPhone || "",
-          emergencyContactRelationship:
-            formData.emergencyContactRelationship || "",
-          streetAddress: formData.address || "",
+          emergencyContactRelation: formData.emergencyContactRelationship || "",
+          address: formData.address || "",
           city: formData.city || "",
           country: formData.country || "",
           zipCode: formData.zipCode || "",
@@ -63,7 +57,7 @@ export default class PatientService {
           isHipaaConsent: formData.hipaaConsent,
           isTermsAccepted: formData.treatmentConsent,
         });
-        patient = { ...newPatient, documents: [] };
+        patient = newPatient;
       }
 
       // Create signature document if provided
@@ -80,9 +74,8 @@ export default class PatientService {
             fileType: "image/png",
             fileSize: formData.signature.length,
             filePath: `/signatures/${patient.id}/`,
-            isEncrypted: false,
-            accessLevel: "private",
-            description: "Patient registration signature",
+            patientId: "",
+            documentPath: "",
           });
         } catch (docError) {
           console.error("Error creating signature document:", docError);
@@ -91,26 +84,11 @@ export default class PatientService {
       }
 
       return {
-        patient: patient as PatientMarketingData,
+        patient,
         isNewPatient,
       };
     } catch (error) {
       console.error("Error processing patient registration:", error);
-      throw error;
-    }
-  }
-
-  // Get patient with full medical history
-  async getPatientProfile(email: string): Promise<PatientWithDocuments | null> {
-    try {
-      const patient = await this.db.findPatientByEmail(email);
-      if (!patient) {
-        return null;
-      }
-
-      return patient;
-    } catch (error) {
-      console.error("Error getting patient profile:", error);
       throw error;
     }
   }
@@ -172,19 +150,19 @@ export default class PatientService {
         },
         {
           label: "Relationship",
-          value: patient.emergencyContactRelationship || "Not provided",
+          value: patient.emergencyContactRelation || "Not provided",
         },
       ],
     });
 
     // Address
-    if (patient.streetAddress || patient.city || patient.country) {
+    if (patient.address || patient.city || patient.country) {
       sections.push({
         title: "Address",
         data: [
           {
             label: "Street Address",
-            value: patient.streetAddress || "Not provided",
+            value: patient.address || "Not provided",
           },
           { label: "City", value: patient.city || "Not provided" },
           { label: "Country", value: patient.country || "Not provided" },

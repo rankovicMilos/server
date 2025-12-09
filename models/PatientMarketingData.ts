@@ -1,7 +1,8 @@
 export default interface PatientMarketingData {
+  id?: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  dateOfBirth: Date;
   gender: string;
   phone: string;
   email: string;
@@ -9,11 +10,11 @@ export default interface PatientMarketingData {
   city: string;
   country: string;
   zipCode: string;
-  emergencyName: string;
-  emergencyPhone: string;
-  emergencyRelationship: string;
-  hearAboutUs: string;
-  referralDetails: string;
-  hipaaConsent: boolean;
-  treatmentConsent: boolean;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  emergencyContactRelation: string;
+  referralChannel: string;
+  referralChannelDetails: string;
+  isHipaaConsent: boolean;
+  isTermsAccepted: boolean;
 }

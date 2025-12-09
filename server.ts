@@ -11,6 +11,7 @@ import PatientService from "./services/PatientService";
 import EmailService from "./services/EmailService";
 import setupEmailRoutes from "./routes/emailRoutes";
 import swaggerSpec from "./swagger/swagger";
+import MySqlMarketingDatabaseService from "./services/MySqlMarketingDatabaseService";
 
 dotenv.config();
 
@@ -82,7 +83,7 @@ app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 async function initializeServices() {
   try {
     // Initialize database service
-    const databaseService = new DatabaseService();
+    const databaseService = new MySqlMarketingDatabaseService();
     await databaseService.initialize();
 
     // Initialize patient service with database dependency
@@ -94,10 +95,6 @@ async function initializeServices() {
     // Verify email configuration
     const emailConfigured = emailService.isConfigured();
     const emailConnected = await emailService.verifyConnection();
-
-    console.log("🔧 Service Status:");
-    console.log(`   📧 Email configured: ${emailConfigured ? "✅" : "❌"}`);
-    console.log(`   📧 Email connected: ${emailConnected ? "✅" : "❌"}`);
 
     // Check database health
     const dbHealth = await databaseService.healthCheck();
@@ -127,11 +124,9 @@ async function startServer() {
     app.get("/api/db-health", async (req: Request, res: Response) => {
       try {
         const health = await databaseService.healthCheck();
-        const stats = await databaseService.getPatientStats();
 
         res.json({
           database: health,
-          statistics: stats,
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
