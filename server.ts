@@ -36,6 +36,8 @@ const corsOptions: cors.CorsOptions = {
       "http://localhost:3000",
       "http://localhost:5173",
       "https://dental-form-vert.vercel.app", // ✅ add this
+      "https://intake-form.confidentclinic.com/",
+      "https://medical-form.confidentclinic.com",
       process.env.FRONTEND_URL,
     ].filter(Boolean) as string[];
 
