@@ -35,8 +35,8 @@ const corsOptions: cors.CorsOptions = {
     const allowedOrigins = [
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://dental-form-vert.vercel.app", // ✅ add this
-      "https://intake-form.confidentclinic.com/",
+      "https://dental-form-vert.vercel.app",
+      "https://intake-form.confidentclinic.com",
       "https://medical-form.confidentclinic.com",
       process.env.FRONTEND_URL,
     ].filter(Boolean) as string[];
@@ -84,27 +84,20 @@ app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 // Initialize services with dependency injection
 async function initializeServices() {
   try {
-    // Initialize database service
     const databaseService = new MySqlMarketingDatabaseService();
     await databaseService.initialize();
 
-    // Initialize patient service with database dependency
     const patientService = new PatientService(databaseService);
-
-    // Initialize email service with patient service dependency
     const emailService = new EmailService(patientService);
 
-    // Verify email configuration
-    const emailConfigured = emailService.isConfigured();
-    const emailConnected = await emailService.verifyConnection();
+    emailService.isConfigured();
+    await emailService.verifyConnection();
 
-    // Check database health
     const dbHealth = await databaseService.healthCheck();
     console.log(
-      `   🗄️  Database: ${dbHealth.status === "healthy" ? "✅" : "❌"}`
+      `   🗄️  Database: ${dbHealth.status === "healthy" ? "✅" : "❌"}`,
     );
 
-    // Initialize controller with email service
     const emailController = new EmailController(emailService);
 
     return { emailController, databaseService };
@@ -114,79 +107,86 @@ async function initializeServices() {
   }
 }
 
-// Setup routes and start server
-async function startServer() {
-  try {
-    const { emailController, databaseService } = await initializeServices();
+function setupRoutes(
+  emailController: EmailController,
+  databaseService: MySqlMarketingDatabaseService,
+) {
+  app.use("/api", setupEmailRoutes(emailController));
 
-    // Setup routes
-    app.use("/api", setupEmailRoutes(emailController));
-
-    // Add database health endpoint
-    app.get("/api/db-health", async (req: Request, res: Response) => {
-      try {
-        const health = await databaseService.healthCheck();
-
-        res.json({
-          database: health,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        res.status(500).json({
-          database: { status: "unhealthy", error: (error as Error).message },
-          timestamp: new Date().toISOString(),
-        });
-      }
-    });
-
-    // Root endpoint
-    app.get("/", (req: Request, res: Response) => {
-      res.json({
-        message: "Dental Email Sender API with Database",
-        version: "2.0.0",
-        features: [
-          "Patient registration with database storage",
-          "Medical history tracking",
-          "HIPAA-compliant audit logging",
-          "Email communication tracking",
-        ],
-        endpoints: {
-          health: "/api/health",
-          databaseHealth: "/api/db-health",
-          sendMedicalForm: "/api/send-medical-form",
-          sendPatientQuestionnaire: "/api/send-patient-questionnaire",
-          documentation: "/swagger",
-        },
+  app.get("/api/db-health", async (_req: Request, res: Response) => {
+    try {
+      const health = await databaseService.healthCheck();
+      res.json({ database: health, timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({
+        database: { status: "unhealthy", error: (error as Error).message },
+        timestamp: new Date().toISOString(),
       });
-    });
+    }
+  });
 
-    // Graceful shutdown
-    process.on("SIGTERM", async () => {
-      console.log("🔄 SIGTERM received, shutting down gracefully...");
-      await databaseService.close();
-      process.exit(0);
+  app.get("/", (_req: Request, res: Response) => {
+    res.json({
+      message: "Dental Email Sender API with Database",
+      version: "2.0.0",
+      endpoints: {
+        health: "/api/health",
+        databaseHealth: "/api/db-health",
+        sendMedicalForm: "/api/send-medical-form",
+        sendPatientQuestionnaire: "/api/send-patient-questionnaire",
+        documentation: "/swagger",
+      },
     });
-
-    process.on("SIGINT", async () => {
-      console.log("🔄 SIGINT received, shutting down gracefully...");
-      await databaseService.close();
-      process.exit(0);
-    });
-
-    app.listen(PORT, () => {
-      console.log(`\n🚀 Dental Email Sender API running on port ${PORT}`);
-      console.log(`   📊 Health check: http://localhost:${PORT}/api/health`);
-      console.log(
-        `   🗄️  Database health: http://localhost:${PORT}/api/db-health`
-      );
-      console.log(`   📚 API Documentation: http://localhost:${PORT}/swagger`);
-      console.log(`   🌐 Root endpoint: http://localhost:${PORT}/\n`);
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:", error);
-    process.exit(1);
-  }
+  });
 }
 
-// Start the server
-startServer();
+// Lazy initialization for serverless environments
+let initPromise: Promise<void> | null = null;
+
+function ensureInitialized(): Promise<void> {
+  if (!initPromise) {
+    initPromise = initializeServices().then(
+      ({ emailController, databaseService }) => {
+        setupRoutes(emailController, databaseService);
+
+        process.on("SIGTERM", async () => {
+          await databaseService.close();
+          process.exit(0);
+        });
+        process.on("SIGINT", async () => {
+          await databaseService.close();
+          process.exit(0);
+        });
+      },
+    );
+  }
+  return initPromise;
+}
+
+// Vercel serverless export — waits for init before handling requests
+export default async function handler(req: Request, res: Response) {
+  await ensureInitialized();
+  return app(req as any, res as any);
+}
+
+// Local development — start the HTTP server directly
+if (!process.env.VERCEL) {
+  ensureInitialized()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`\n🚀 Dental Email Sender API running on port ${PORT}`);
+        console.log(`   📊 Health check: http://localhost:${PORT}/api/health`);
+        console.log(
+          `   🗄️  Database health: http://localhost:${PORT}/api/db-health`,
+        );
+        console.log(
+          `   📚 API Documentation: http://localhost:${PORT}/swagger`,
+        );
+        console.log(`   🌐 Root endpoint: http://localhost:${PORT}/\n`);
+      });
+    })
+    .catch((error) => {
+      console.error("❌ Failed to start server:", error);
+      process.exit(1);
+    });
+}
