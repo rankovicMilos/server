@@ -83,28 +83,30 @@ app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 // Initialize services with dependency injection
 async function initializeServices() {
+  const databaseService = new MySqlMarketingDatabaseService();
+
   try {
-    const databaseService = new MySqlMarketingDatabaseService();
     await databaseService.initialize();
-
-    const patientService = new PatientService(databaseService);
-    const emailService = new EmailService(patientService);
-
-    emailService.isConfigured();
-    await emailService.verifyConnection();
-
     const dbHealth = await databaseService.healthCheck();
     console.log(
       `   🗄️  Database: ${dbHealth.status === "healthy" ? "✅" : "❌"}`,
     );
-
-    const emailController = new EmailController(emailService);
-
-    return { emailController, databaseService };
   } catch (error) {
-    console.error("❌ Failed to initialize services:", error);
-    throw error;
+    console.error("❌ Database init failed:", error);
   }
+
+  const patientService = new PatientService(databaseService);
+  const emailService = new EmailService(patientService);
+
+  try {
+    emailService.isConfigured();
+    await emailService.verifyConnection();
+  } catch (error) {
+    console.error("❌ Email service init failed:", error);
+  }
+
+  const emailController = new EmailController(emailService);
+  return { emailController, databaseService };
 }
 
 function setupRoutes(
