@@ -145,8 +145,8 @@ let initPromise: Promise<void> | null = null;
 
 function ensureInitialized(): Promise<void> {
   if (!initPromise) {
-    initPromise = initializeServices().then(
-      ({ emailController, databaseService }) => {
+    initPromise = initializeServices()
+      .then(({ emailController, databaseService }) => {
         setupRoutes(emailController, databaseService);
 
         process.on("SIGTERM", async () => {
@@ -157,15 +157,22 @@ function ensureInitialized(): Promise<void> {
           await databaseService.close();
           process.exit(0);
         });
-      },
-    );
+      })
+      .catch((error) => {
+        initPromise = null; // allow retry on next request
+        throw error;
+      });
   }
   return initPromise;
 }
 
-// Vercel serverless export — waits for init before handling requests
+// Vercel serverless export — CORS middleware always runs even if init fails
 export default async function handler(req: Request, res: Response) {
-  await ensureInitialized();
+  try {
+    await ensureInitialized();
+  } catch (error) {
+    console.error("❌ Initialization failed:", error);
+  }
   return app(req as any, res as any);
 }
 
