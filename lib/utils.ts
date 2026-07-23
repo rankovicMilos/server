@@ -1,8 +1,9 @@
 // Decodes a base64 data URL (e.g. "data:image/png;base64,...") into a Buffer + content type.
 // Falls back to image/png if the string has no data URL prefix (raw base64).
-function decodeBase64DataUrl(
-  dataUrl: string
-): { buffer: Buffer; contentType: string } {
+function decodeBase64DataUrl(dataUrl: string): {
+  buffer: Buffer;
+  contentType: string;
+} {
   const match = /^data:(.+);base64,(.*)$/.exec(dataUrl);
   const contentType = match ? match[1] : "image/png";
   const base64Payload = match ? match[2] : dataUrl;
@@ -186,9 +187,8 @@ const PATIENT_QUESTIONNAIRE_SECTIONS = {
  */
 const formatPatientDataForEmail = (
   formatData: FormatData,
-  lang: string
+  lang: string,
 ): string => {
-  console.log("Formatting patient data for email:", formatData);
   const { formData } = formatData;
 
   // Helper functions
@@ -237,7 +237,7 @@ const formatPatientDataForEmail = (
   // Generate sections
   const generateSection = (
     sectionKey: string,
-    section: FormSection
+    section: FormSection,
   ): string => {
     let fields: string[];
 
@@ -248,12 +248,12 @@ const formatPatientDataForEmail = (
         ...section.fields
           .slice(2)
           .map((field: FormField) =>
-            createListItem(field.label, formatFieldValue(field, formData))
+            createListItem(field.label, formatFieldValue(field, formData)),
           ),
       ];
     } else {
       fields = section.fields.map((field: FormField) =>
-        createListItem(field.label, formatFieldValue(field, formData))
+        createListItem(field.label, formatFieldValue(field, formData)),
       );
     }
 
@@ -294,9 +294,8 @@ const formatPatientDataForEmail = (
  */
 const formatPatientQuestionnaireForEmail = (
   formatData: PatientFormatData,
-  lang: string
+  lang: string,
 ): string => {
-  console.log("Formatting patient registration data for email:", formatData);
   const { patientData } = formatData;
 
   // Helper functions
@@ -338,7 +337,7 @@ const formatPatientQuestionnaireForEmail = (
     const zipCode = formatText(patientData.zipCode, "");
 
     const addressParts = [address, city, state, zipCode].filter(
-      (part: string) => part !== "" && part !== "Not provided"
+      (part: string) => part !== "" && part !== "Not provided",
     );
 
     return addressParts.length > 0 ? addressParts.join(", ") : "Not provided";
@@ -347,7 +346,7 @@ const formatPatientQuestionnaireForEmail = (
   // Generate sections
   const generateSection = (
     sectionKey: string,
-    section: FormSection
+    section: FormSection,
   ): string => {
     let fields: string[];
 
@@ -358,19 +357,19 @@ const formatPatientQuestionnaireForEmail = (
         ...section.fields
           .slice(2) // Skip firstName and lastName as they're combined
           .map((field: FormField) =>
-            createListItem(field.label, formatFieldValue(field, patientData))
+            createListItem(field.label, formatFieldValue(field, patientData)),
           ),
       ];
     } else if (sectionKey === "address") {
       fields = [
         createListItem("Full Address", formatAddress(patientData)),
         ...section.fields.map((field: FormField) =>
-          createListItem(field.label, formatFieldValue(field, patientData))
+          createListItem(field.label, formatFieldValue(field, patientData)),
         ),
       ];
     } else {
       fields = section.fields.map((field: FormField) =>
-        createListItem(field.label, formatFieldValue(field, patientData))
+        createListItem(field.label, formatFieldValue(field, patientData)),
       );
     }
 
@@ -405,7 +404,7 @@ const formatPatientQuestionnaireForEmail = (
 const formatPatientDataForEmailAdvanced = (
   formatData: FormatData,
   lang: string,
-  options: AdvancedFormatOptions = {}
+  options: AdvancedFormatOptions = {},
 ): string => {
   const {
     includeEmptyFields = false,
@@ -413,7 +412,6 @@ const formatPatientDataForEmailAdvanced = (
     compactMode = false,
   } = options;
 
-  console.log("Formatting patient data for email:", formatData);
   const { formData } = formatData;
 
   // Helper functions
@@ -429,7 +427,7 @@ const formatPatientDataForEmailAdvanced = (
 
   const formatNumber = (
     value: any,
-    defaultValue = "Not specified"
+    defaultValue = "Not specified",
   ): string | null => {
     if (value !== null && value !== undefined) {
       return value.toString();
@@ -439,12 +437,12 @@ const formatPatientDataForEmailAdvanced = (
 
   const formatText = (
     value: any,
-    defaultValue = "Not provided"
+    defaultValue = "Not provided",
   ): string | null => value || (includeEmptyFields ? defaultValue : null);
 
   const createListItem = (
     label: string,
-    value: string | null
+    value: string | null,
   ): string | null => {
     if (
       !includeEmptyFields &&
@@ -460,7 +458,7 @@ const formatPatientDataForEmailAdvanced = (
   // Format field based on type (advanced version with nullable returns)
   const formatFieldValueAdvanced = (
     field: FormField,
-    formData: any
+    formData: any,
   ): string | null => {
     const value = formData[field.key];
 
@@ -498,7 +496,7 @@ const formatPatientDataForEmailAdvanced = (
   // Generate sections with filtering
   const generateSection = (
     sectionKey: string,
-    section: FormSection
+    section: FormSection,
   ): string => {
     let fields: (string | null)[];
 
@@ -508,17 +506,23 @@ const formatPatientDataForEmailAdvanced = (
       const otherFields = section.fields
         .slice(2)
         .map((field: FormField) =>
-          createListItem(field.label, formatFieldValueAdvanced(field, formData))
+          createListItem(
+            field.label,
+            formatFieldValueAdvanced(field, formData),
+          ),
         )
         .filter((item: string | null) => item !== null);
 
       fields = [nameItem, ...otherFields].filter(
-        (item: string | null) => item !== null
+        (item: string | null) => item !== null,
       );
     } else {
       fields = section.fields
         .map((field: FormField) =>
-          createListItem(field.label, formatFieldValueAdvanced(field, formData))
+          createListItem(
+            field.label,
+            formatFieldValueAdvanced(field, formData),
+          ),
         )
         .filter((item: string | null) => item !== null);
     }

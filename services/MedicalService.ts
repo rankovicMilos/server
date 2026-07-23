@@ -24,7 +24,7 @@ export default class MedicalService {
 
   // Persist a medical questionnaire submission, keyed by email when available
   async processMedicalFormSubmission(
-    formData: any
+    formData: any,
   ): Promise<MedicalFormSubmissionResult> {
     const email: string | undefined = formData.email || undefined;
 
@@ -57,27 +57,19 @@ export default class MedicalService {
       usesDrugs: !!formData.drugs,
     };
 
-    const existing = email
-      ? await this.db.findMedicalDataByEmail(email)
-      : null;
-
-    const record = existing
-      ? await this.db.updateMedicalData(existing.id, data)
-      : await this.db.createMedicalData(data);
+    const record = await this.db.createMedicalData(data);
 
     // Upload signature to storage. There's no `patients` row backing a medical-only
     // submission, so this stores directly to the bucket rather than via a
     // patient_documents record (which has a required FK to patients.id).
     if (formData.signature) {
       try {
-        const { buffer, contentType } = decodeBase64DataUrl(
-          formData.signature
-        );
+        const { buffer, contentType } = decodeBase64DataUrl(formData.signature);
         const extension = contentType.split("/")[1] || "png";
         await this.db.uploadToBucket(
           `signatures/medical/${record.id}.${extension}`,
           buffer,
-          contentType
+          contentType,
         );
       } catch (uploadError) {
         console.error("Error uploading signature to storage:", uploadError);
@@ -85,6 +77,6 @@ export default class MedicalService {
       }
     }
 
-    return { record, isNewRecord: !existing };
+    return { record, isNewRecord: true };
   }
 }

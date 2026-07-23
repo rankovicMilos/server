@@ -64,10 +64,7 @@ export default class EmailService {
    * @param lang - The form language
    * @returns Email send result
    */
-  async sendMedicalFormEmail(
-    formData: any,
-    lang?: string,
-  ): Promise<EmailResult> {
+  async sendMedicalFormEmail(formData: any, lang?: string): Promise<any> {
     try {
       if (!formData) {
         throw new Error("Form data is required");
@@ -89,22 +86,9 @@ export default class EmailService {
         }
       }
 
-      const mailOptions: MailOptions = {
-        from: process.env.EMAIL_USER || "",
-        to: formData.email || process.env.RECIPIENT_EMAIL || "",
-        subject: `New Dental Medical Form - ${
-          formData.firstName || "Unknown"
-        } ${formData.lastName || "Patient"}`,
-        html: formatPatientDataForEmail({ formData }, lang || "en"),
-        replyTo: process.env.RECIPIENT_EMAIL || "",
-      };
-
-      const info = await this.transporter.sendMail(mailOptions);
-
       return {
         success: true,
-        message: "Form submitted and email sent successfully",
-        messageId: info.messageId,
+        message: "Form submitted",
         savedToDatabase,
       };
     } catch (error) {
