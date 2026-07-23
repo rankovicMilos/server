@@ -1,6 +1,8 @@
+import { Tables } from "../types/supabase";
 import { EmailFormData } from "../models/EmailFormData";
-import PatientMarketingData from "../models/PatientMarketingData";
-import MySqlDatabaseService from "./MySqlMarketingDatabaseService";
+import DatabaseService from "./DatabaseService";
+
+type PatientMarketingData = Tables<"patients">;
 
 interface PatientRegistrationResult {
   patient: PatientMarketingData;
@@ -16,9 +18,9 @@ interface EmailSection {
 }
 
 export default class PatientService {
-  private readonly db: MySqlDatabaseService;
+  private readonly db: DatabaseService;
 
-  constructor(databaseService: MySqlDatabaseService) {
+  constructor(databaseService: DatabaseService) {
     this.db = databaseService;
   }
 
@@ -27,28 +29,27 @@ export default class PatientService {
     formData: EmailFormData
   ): Promise<PatientRegistrationResult> {
     try {
-      console.log("Processing registration for:", formData);
+      console.log("Processing registration for:", formData.email);
 
       // Check if patient already exists
       let patient = await this.db.findPatientByEmail(formData.email);
-
-      // Prepare emergency contact data
-
-      const isNewPatient = true;
+      const isNewPatient = !patient;
 
       if (!patient) {
-        // Create new patient
-        const newPatient = await this.db.createPatient({
+        patient = await this.db.createPatient({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone || "",
           gender: formData.gender || "",
-          dateOfBirth: new Date(formData.dateOfBirth),
+          dateOfBirth: formData.dateOfBirth
+            ? new Date(formData.dateOfBirth).toISOString()
+            : undefined,
           emergencyContactName: formData.emergencyContactName || "",
           emergencyContactPhone: formData.emergencyContactPhone || "",
-          emergencyContactRelation: formData.emergencyContactRelationship || "",
-          address: formData.address || "",
+          emergencyContactRelationship:
+            formData.emergencyContactRelationship || "",
+          streetAddress: formData.address || "",
           city: formData.city || "",
           country: formData.country || "",
           zipCode: formData.zipCode || "",
@@ -57,25 +58,18 @@ export default class PatientService {
           isHipaaConsent: formData.hipaaConsent,
           isTermsAccepted: formData.treatmentConsent,
         });
-        patient = newPatient;
       }
 
       // Create signature document if provided
       if (formData.signature && patient?.id) {
         try {
           await this.db.createDocument(patient.id, {
-            documentType: "signature",
-            fileName: `signature_${patient.firstName}_${
-              patient.lastName
-            }_${Date.now()}.png`,
-            originalName: `signature_${patient.firstName}_${
-              patient.lastName
-            }_${Date.now()}.png`,
+            fileName: `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`,
+            originalName: `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`,
             fileType: "image/png",
             fileSize: formData.signature.length,
             filePath: `/signatures/${patient.id}/`,
-            patientId: "",
-            documentPath: "",
+            documentType: "signature",
           });
         } catch (docError) {
           console.error("Error creating signature document:", docError);
@@ -129,14 +123,13 @@ export default class PatientService {
         {
           label: "Date of Birth",
           value: patient.dateOfBirth
-            ? patient.dateOfBirth.toDateString()
+            ? new Date(patient.dateOfBirth).toDateString()
             : "Not provided",
         },
       ],
     });
 
     // Emergency Contact
-
     sections.push({
       title: "Emergency Contact",
       data: [
@@ -150,19 +143,19 @@ export default class PatientService {
         },
         {
           label: "Relationship",
-          value: patient.emergencyContactRelation || "Not provided",
+          value: patient.emergencyContactRelationship || "Not provided",
         },
       ],
     });
 
     // Address
-    if (patient.address || patient.city || patient.country) {
+    if (patient.streetAddress || patient.city || patient.country) {
       sections.push({
         title: "Address",
         data: [
           {
             label: "Street Address",
-            value: patient.address || "Not provided",
+            value: patient.streetAddress || "Not provided",
           },
           { label: "City", value: patient.city || "Not provided" },
           { label: "Country", value: patient.country || "Not provided" },

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import PatientService from "./PatientService";
+import MedicalService from "./MedicalService";
 import {
   formatPatientDataForEmail,
   formatPatientQuestionnaireForEmail,
@@ -33,9 +34,14 @@ interface MailOptions {
 export default class EmailService {
   private transporter: nodemailer.Transporter;
   private readonly patientService: PatientService | null;
+  private readonly medicalService: MedicalService | null;
 
-  constructor(patientService: PatientService | null = null) {
+  constructor(
+    patientService: PatientService | null = null,
+    medicalService: MedicalService | null = null
+  ) {
     this.patientService = patientService;
+    this.medicalService = medicalService;
     this.initializeTransporter();
   }
 
@@ -67,6 +73,22 @@ export default class EmailService {
         throw new Error("Form data is required");
       }
 
+      let savedToDatabase = false;
+
+      // Persist the medical history to the database if a medical service is available
+      if (this.medicalService) {
+        try {
+          await this.medicalService.processMedicalFormSubmission(formData);
+          savedToDatabase = true;
+        } catch (dbError) {
+          console.error(
+            "Database save failed, but continuing with email:",
+            dbError
+          );
+          // Continue with email even if database save fails
+        }
+      }
+
       const mailOptions: MailOptions = {
         from: process.env.EMAIL_USER || "",
         to: formData.email || process.env.RECIPIENT_EMAIL || "",
@@ -84,6 +106,7 @@ export default class EmailService {
         success: true,
         message: "Form submitted and email sent successfully",
         messageId: info.messageId,
+        savedToDatabase,
       };
     } catch (error) {
       console.error("Error sending email:", error);
@@ -137,8 +160,7 @@ export default class EmailService {
         replyTo: patientData.email,
       };
 
-      //const info = await this.transporter.sendMail(mailOptions);
-      const info = { messageId: "mock-message-id-12345" }; // Mocked for demonstration
+      const info = await this.transporter.sendMail(mailOptions);
       console.log(
         "Patient registration email sent successfully:",
         info.messageId

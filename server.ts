@@ -8,10 +8,10 @@ import dotenv from "dotenv";
 import EmailController from "./controllers/EmailController";
 import DatabaseService from "./services/DatabaseService";
 import PatientService from "./services/PatientService";
+import MedicalService from "./services/MedicalService";
 import EmailService from "./services/EmailService";
 import setupEmailRoutes from "./routes/emailRoutes";
 import swaggerSpec from "./swagger/swagger";
-import MySqlMarketingDatabaseService from "./services/MySqlMarketingDatabaseService";
 
 dotenv.config();
 
@@ -83,7 +83,7 @@ app.use("/swagger", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
 // Initialize services with dependency injection
 async function initializeServices() {
-  const databaseService = new MySqlMarketingDatabaseService();
+  const databaseService = new DatabaseService();
 
   try {
     await databaseService.initialize();
@@ -96,7 +96,8 @@ async function initializeServices() {
   }
 
   const patientService = new PatientService(databaseService);
-  const emailService = new EmailService(patientService);
+  const medicalService = new MedicalService(databaseService);
+  const emailService = new EmailService(patientService, medicalService);
 
   try {
     emailService.isConfigured();
@@ -111,7 +112,7 @@ async function initializeServices() {
 
 function setupRoutes(
   emailController: EmailController,
-  databaseService: MySqlMarketingDatabaseService,
+  databaseService: DatabaseService,
 ) {
   app.use("/api", setupEmailRoutes(emailController));
 

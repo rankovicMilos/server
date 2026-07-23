@@ -2,9 +2,11 @@
 /node_modules
 /server.js.backup
 /test-email.js
-/generated/prisma
-prisma/migrations/migration_lock.toml
-
+/.agents
+/.claude
+/.mcp.json
+/.DS_Store
+/skils-lock.json
 # TypeScript build output
 /dist
 *.tsbuildinfo
