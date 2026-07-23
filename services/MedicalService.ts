@@ -1,5 +1,6 @@
 import { Tables } from "../types/supabase";
 import DatabaseService from "./DatabaseService";
+import { decodeBase64DataUrl } from "../lib/utils";
 
 type PatientMedicalData = Tables<"patient_medical_data">;
 
@@ -63,6 +64,26 @@ export default class MedicalService {
     const record = existing
       ? await this.db.updateMedicalData(existing.id, data)
       : await this.db.createMedicalData(data);
+
+    // Upload signature to storage. There's no `patients` row backing a medical-only
+    // submission, so this stores directly to the bucket rather than via a
+    // patient_documents record (which has a required FK to patients.id).
+    if (formData.signature) {
+      try {
+        const { buffer, contentType } = decodeBase64DataUrl(
+          formData.signature
+        );
+        const extension = contentType.split("/")[1] || "png";
+        await this.db.uploadToBucket(
+          `signatures/medical/${record.id}.${extension}`,
+          buffer,
+          contentType
+        );
+      } catch (uploadError) {
+        console.error("Error uploading signature to storage:", uploadError);
+        // Don't fail the submission if the signature upload fails
+      }
+    }
 
     return { record, isNewRecord: !existing };
   }

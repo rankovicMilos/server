@@ -1,3 +1,14 @@
+// Decodes a base64 data URL (e.g. "data:image/png;base64,...") into a Buffer + content type.
+// Falls back to image/png if the string has no data URL prefix (raw base64).
+function decodeBase64DataUrl(
+  dataUrl: string
+): { buffer: Buffer; contentType: string } {
+  const match = /^data:(.+);base64,(.*)$/.exec(dataUrl);
+  const contentType = match ? match[1] : "image/png";
+  const base64Payload = match ? match[2] : dataUrl;
+  return { buffer: Buffer.from(base64Payload, "base64"), contentType };
+}
+
 // Type definitions
 interface FormField {
   key: string;
@@ -563,6 +574,7 @@ const formatPatientDataForEmailAdvanced = (
 };
 
 export {
+  decodeBase64DataUrl,
   formatPatientDataForEmail,
   formatPatientDataForEmailAdvanced,
   formatPatientQuestionnaireForEmail,

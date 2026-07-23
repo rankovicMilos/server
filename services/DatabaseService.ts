@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Database, Tables, TablesInsert, TablesUpdate } from "../types/supabase";
+import {
+  Database,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "../types/supabase";
 import { createSupabaseClient } from "./supabaseClient";
 
 type PatientMarketingData = Tables<"patients">;
@@ -38,12 +43,20 @@ export default class DatabaseService {
 
   // Patient operations
   async createPatient(
-    patientData: Omit<TablesInsert<"patients">, "id" | "createdAt" | "updatedAt">
+    patientData: Omit<
+      TablesInsert<"patients">,
+      "id" | "createdAt" | "updatedAt"
+    >,
   ): Promise<PatientMarketingData> {
     const now = new Date().toISOString();
     const { data, error } = await this.supabase
       .from("patients")
-      .insert({ id: randomUUID(), ...patientData, createdAt: now, updatedAt: now })
+      .insert({
+        id: randomUUID(),
+        ...patientData,
+        createdAt: now,
+        updatedAt: now,
+      })
       .select()
       .single();
 
@@ -52,11 +65,20 @@ export default class DatabaseService {
       throw error;
     }
 
-    await this.logPatientAction(data.id, "create", "patients", data.id, null, data);
+    await this.logPatientAction(
+      data.id,
+      "create",
+      "patients",
+      data.id,
+      null,
+      data,
+    );
     return data;
   }
 
-  async findPatientByEmail(email: string): Promise<PatientMarketingData | null> {
+  async findPatientByEmail(
+    email: string,
+  ): Promise<PatientMarketingData | null> {
     const { data, error } = await this.supabase
       .from("patients")
       .select()
@@ -72,7 +94,7 @@ export default class DatabaseService {
 
   async updatePatient(
     id: string,
-    updateData: TablesUpdate<"patients">
+    updateData: TablesUpdate<"patients">,
   ): Promise<PatientMarketingData> {
     const { data: oldPatient } = await this.supabase
       .from("patients")
@@ -98,12 +120,20 @@ export default class DatabaseService {
 
   // Medical data operations
   async createMedicalData(
-    medicalData: Omit<TablesInsert<"patient_medical_data">, "id" | "createdAt" | "updatedAt">
+    medicalData: Omit<
+      TablesInsert<"patient_medical_data">,
+      "id" | "createdAt" | "updatedAt"
+    >,
   ): Promise<PatientMedicalData> {
     const now = new Date().toISOString();
     const { data, error } = await this.supabase
       .from("patient_medical_data")
-      .insert({ id: randomUUID(), ...medicalData, createdAt: now, updatedAt: now })
+      .insert({
+        id: randomUUID(),
+        ...medicalData,
+        createdAt: now,
+        updatedAt: now,
+      })
       .select()
       .single();
 
@@ -114,7 +144,9 @@ export default class DatabaseService {
     return data;
   }
 
-  async findMedicalDataByEmail(email: string): Promise<PatientMedicalData | null> {
+  async findMedicalDataByEmail(
+    email: string,
+  ): Promise<PatientMedicalData | null> {
     const { data, error } = await this.supabase
       .from("patient_medical_data")
       .select()
@@ -130,7 +162,7 @@ export default class DatabaseService {
 
   async updateMedicalData(
     id: string,
-    updateData: TablesUpdate<"patient_medical_data">
+    updateData: TablesUpdate<"patient_medical_data">,
   ): Promise<PatientMedicalData> {
     const { data, error } = await this.supabase
       .from("patient_medical_data")
@@ -147,10 +179,21 @@ export default class DatabaseService {
   }
 
   // Document operations
+  // Upload the file to the storage bucket first, then record it in the database.
   async createDocument(
     patientId: string,
-    documentData: Omit<TablesInsert<"patient_documents">, "id" | "patientId" | "uploadedAt">
+    documentData: Omit<
+      TablesInsert<"patient_documents">,
+      "id" | "patientId" | "uploadedAt"
+    >,
+    fileContent: Buffer,
   ): Promise<PatientDocument> {
+    await this.uploadToBucket(
+      documentData.filePath,
+      fileContent,
+      documentData.fileType,
+    );
+
     const { data, error } = await this.supabase
       .from("patient_documents")
       .insert({ id: randomUUID(), patientId, ...documentData })
@@ -168,7 +211,7 @@ export default class DatabaseService {
       "patient_documents",
       data.id,
       null,
-      data
+      data,
     );
     return data;
   }
@@ -181,7 +224,7 @@ export default class DatabaseService {
     recordId: string,
     oldValues: any = null,
     newValues: any = null,
-    userId: string | null = null
+    userId: string | null = null,
   ): Promise<void> {
     const { error } = await this.supabase.from("patient_audit_logs").insert({
       id: randomUUID(),
@@ -216,5 +259,21 @@ export default class DatabaseService {
       };
     }
     return { status: "healthy", timestamp: new Date().toISOString() };
+  }
+
+  async uploadToBucket(
+    filePath: string,
+    fileContent: Buffer,
+    contentType: string,
+  ): Promise<void> {
+    const bucketName = process.env.STORAGE_BUCKET_NAME || "signatures";
+    const { error } = await this.supabase.storage
+      .from(bucketName)
+      .upload(filePath, fileContent, { contentType, upsert: true });
+
+    if (error) {
+      console.error("Error uploading file to storage bucket:", error);
+      throw error;
+    }
   }
 }

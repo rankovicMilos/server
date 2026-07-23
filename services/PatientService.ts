@@ -1,6 +1,7 @@
 import { Tables } from "../types/supabase";
 import { EmailFormData } from "../models/EmailFormData";
 import DatabaseService from "./DatabaseService";
+import { decodeBase64DataUrl } from "../lib/utils";
 
 type PatientMarketingData = Tables<"patients">;
 
@@ -63,14 +64,23 @@ export default class PatientService {
       // Create signature document if provided
       if (formData.signature && patient?.id) {
         try {
-          await this.db.createDocument(patient.id, {
-            fileName: `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`,
-            originalName: `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`,
-            fileType: "image/png",
-            fileSize: formData.signature.length,
-            filePath: `/signatures/${patient.id}/`,
-            documentType: "signature",
-          });
+          const { buffer, contentType } = decodeBase64DataUrl(
+            formData.signature
+          );
+          const fileName = `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`;
+
+          await this.db.createDocument(
+            patient.id,
+            {
+              fileName,
+              originalName: fileName,
+              fileType: contentType,
+              fileSize: buffer.length,
+              filePath: `signatures/${patient.id}/${fileName}`,
+              documentType: "signature",
+            },
+            buffer
+          );
         } catch (docError) {
           console.error("Error creating signature document:", docError);
           // Don't fail the registration if signature document creation fails
