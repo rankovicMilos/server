@@ -38,7 +38,7 @@ export default class EmailService {
 
   constructor(
     patientService: PatientService | null = null,
-    medicalService: MedicalService | null = null
+    medicalService: MedicalService | null = null,
   ) {
     this.patientService = patientService;
     this.medicalService = medicalService;
@@ -66,7 +66,7 @@ export default class EmailService {
    */
   async sendMedicalFormEmail(
     formData: any,
-    lang?: string
+    lang?: string,
   ): Promise<EmailResult> {
     try {
       if (!formData) {
@@ -83,7 +83,7 @@ export default class EmailService {
         } catch (dbError) {
           console.error(
             "Database save failed, but continuing with email:",
-            dbError
+            dbError,
           );
           // Continue with email even if database save fails
         }
@@ -100,7 +100,6 @@ export default class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log("Email sent successfully:", info.messageId);
 
       return {
         success: true,
@@ -122,7 +121,7 @@ export default class EmailService {
    */
   async sendPatientQuestionnaireEmail(
     patientData: EmailFormData,
-    lang?: string
+    lang?: string,
   ): Promise<EmailResult> {
     try {
       if (!patientData) {
@@ -134,17 +133,12 @@ export default class EmailService {
       // If patient service is available, process and save to database
       if (this.patientService) {
         try {
-          dbResult = await this.patientService.processPatientRegistration(
-            patientData
-          );
-          console.log("Patient data saved to database:", {
-            patientId: dbResult.patient.id,
-            isNewPatient: dbResult.isNewPatient,
-          });
+          dbResult =
+            await this.patientService.processPatientRegistration(patientData);
         } catch (dbError) {
           console.error(
             "Database save failed, but continuing with email:",
-            dbError
+            dbError,
           );
           // Continue with email even if database save fails
         }
@@ -161,10 +155,6 @@ export default class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(
-        "Patient registration email sent successfully:",
-        info.messageId
-      );
 
       return {
         success: true,

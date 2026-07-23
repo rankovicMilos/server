@@ -35,7 +35,6 @@ export default class DatabaseService {
       console.error("❌ Database connection failed:", error);
       throw error;
     }
-    console.log("✅ Database connected successfully");
   }
 
   // No persistent connection to tear down with the HTTP-based client

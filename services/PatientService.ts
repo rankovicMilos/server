@@ -27,11 +27,9 @@ export default class PatientService {
 
   // Process patient registration from form data
   async processPatientRegistration(
-    formData: EmailFormData
+    formData: EmailFormData,
   ): Promise<PatientRegistrationResult> {
     try {
-      console.log("Processing registration for:", formData.email);
-
       // Check if patient already exists
       let patient = await this.db.findPatientByEmail(formData.email);
       const isNewPatient = !patient;
@@ -65,7 +63,7 @@ export default class PatientService {
       if (formData.signature && patient?.id) {
         try {
           const { buffer, contentType } = decodeBase64DataUrl(
-            formData.signature
+            formData.signature,
           );
           const fileName = `signature_${patient.firstName}_${patient.lastName}_${Date.now()}.png`;
 
@@ -79,7 +77,7 @@ export default class PatientService {
               filePath: `signatures/${patient.id}/${fileName}`,
               documentType: "signature",
             },
-            buffer
+            buffer,
           );
         } catch (docError) {
           console.error("Error creating signature document:", docError);
@@ -119,7 +117,7 @@ export default class PatientService {
   // Format patient data for email
   formatPatientDataForEmail(
     patient: PatientMarketingData,
-    medicalHistory?: any
+    medicalHistory?: any,
   ): EmailSection[] {
     const sections: EmailSection[] = [];
 

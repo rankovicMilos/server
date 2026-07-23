@@ -41,9 +41,6 @@ const corsOptions: cors.CorsOptions = {
       process.env.FRONTEND_URL,
     ].filter(Boolean) as string[];
 
-    console.log(`🌐 CORS Check - Origin: ${origin || "no origin"}`);
-    console.log(`🌐 Allowed Origins: ${allowedOrigins.join(", ")}`);
-
     if (!origin) return callback(null, true); // Postman/curl etc.
 
     if (allowedOrigins.includes(origin)) return callback(null, true);
@@ -88,9 +85,6 @@ async function initializeServices() {
   try {
     await databaseService.initialize();
     const dbHealth = await databaseService.healthCheck();
-    console.log(
-      `   🗄️  Database: ${dbHealth.status === "healthy" ? "✅" : "❌"}`,
-    );
   } catch (error) {
     console.error("❌ Database init failed:", error);
   }
@@ -181,22 +175,8 @@ export default async function handler(req: Request, res: Response) {
 
 // Local development — start the HTTP server directly
 if (!process.env.VERCEL) {
-  ensureInitialized()
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`\n🚀 Dental Email Sender API running on port ${PORT}`);
-        console.log(`   📊 Health check: http://localhost:${PORT}/api/health`);
-        console.log(
-          `   🗄️  Database health: http://localhost:${PORT}/api/db-health`,
-        );
-        console.log(
-          `   📚 API Documentation: http://localhost:${PORT}/swagger`,
-        );
-        console.log(`   🌐 Root endpoint: http://localhost:${PORT}/\n`);
-      });
-    })
-    .catch((error) => {
-      console.error("❌ Failed to start server:", error);
-      process.exit(1);
-    });
+  ensureInitialized().catch((error) => {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  });
 }
